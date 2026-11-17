@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lotto Picker</title>
+<style>
+:root{
+  --bg:#EAF3EE; --card:#FFFFFF; --ink:#16224F; --muted:#4D5A80; --line:#C9D9D0;
+  --accent:#D3262B; --live:#1F7A4D;
+  --b1:#FAC775; --b1t:#633806; --b1e:#BA7517;
+  --b2:#F7C1C1; --b2t:#791F1F; --b2e:#E24B4A;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1A2E; --card:#17243D; --ink:#E9EEF8; --muted:#A7B3CC; --line:#2A3A58;
+    --accent:#F0595D; --live:#5BD196; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1A2E; --card:#17243D; --ink:#E9EEF8; --muted:#A7B3CC; --line:#2A3A58;
+  --accent:#F0595D; --live:#5BD196; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;line-height:1.5}
+main{max-width:520px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:2rem;line-height:1.1;margin:0 0 8px;font-weight:800;letter-spacing:-0.02em}
+.lede{color:var(--muted);margin:0 0 20px}
+#today{font-weight:600;margin:0 0 10px}
+.games{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 20px}
+.gb{font:inherit;color:var(--ink);text-align:left;background:var(--card);border:2px solid var(--line);
+  border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:64px}
+.gb.on{border-color:var(--accent)}
+.gb:focus-visible,.btn:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
+.gn{font-weight:800;font-size:1.15rem}
+.gt,.gw{font-size:.82rem;color:var(--muted)}
+.gw.live{color:var(--live);font-weight:600}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:18px}
+#gname{font-weight:800;font-size:1.2rem;margin:0 0 2px}
+#odds{font-size:.9rem;color:var(--muted);margin:0 0 16px}
+#balls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;min-height:52px;margin:0 0 16px}
+.ball{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;font-weight:800;background:var(--b1);color:var(--b1t);border:2px solid var(--b1e)}
+.ball.r{background:var(--b2);color:var(--b2t);border-color:var(--b2e)}
+@media (prefers-reduced-motion:no-preference){
+  .ball{animation:pop .4s ease-out both}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:700;border-radius:999px;padding:11px 18px;cursor:pointer;border:2px solid var(--ink);
+  background:transparent;color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg)}
+#msg{font-size:.85rem;color:var(--live);min-height:1.3em;margin:10px 0 0}
+.note{margin-top:22px;font-size:.88rem;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+.note p{margin:0 0 10px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Pick numbers nobody else picks</h1>
+  <p class="lede">No combination is more likely to win. But if fewer people play yours, you won’t split the jackpot with hundreds of others.</p>
+
+  <p id="today">Loading today’s draws</p>
+  <div class="games" id="games"></div>
+
+  <div class="card">
+    <p id="gname">Tap a game above</p>
+    <p id="odds">Your six numbers will appear here.</p>
+    <div id="balls"></div>
+    <div class="row">
+      <button class="btn primary" id="again" type="button">Pick again</button>
+      <button class="btn" id="copy" type="button">Copy numbers</button>
+    </div>
+    <p id="msg"></p>
+  </div>
+
+  <div class="note">
+    <p>Each pick is random, then redrawn if it falls into a pattern lots of people bet on: multiples of one number, three in a row, all birthday numbers (1–31), the same last digit, or numbers bunched together.</p>
+    <p>On Oct 1, 2022, Grand Lotto 6/55 drew 9-18-27-36-45-54. 433 people had bet it, so ₱236 million became about ₱545,000 each.</p>
+    <p>Draw days follow PCSO’s usual schedule and can change on holidays. Play only what you can afford to lose.</p>
+  </div>
+</main>
+
+<script>
+(function(){
+  var GAMES=[
+    {n:"6/58",t:"Ultra Lotto",max:58,odds:"40,475,358",d:[2,5,0]},
+    {n:"6/55",t:"Grand Lotto",max:55,odds:"28,989,675",d:[1,3,6]},
+    {n:"6/49",t:"Super Lotto",max:49,odds:"13,983,816",d:[2,4,0]},
+    {n:"6/45",t:"Mega Lotto",max:45,odds:"8,145,060",d:[1,3,5]},
+    {n:"6/42",t:"Lotto",max:42,odds:"5,245,786",d:[2,4,6]}
+  ];
+  var DN=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+  // Philippine time = UTC+8, no daylight saving
+  var ph=new Date(Date.now()+8*3600*1000);
+  var now={day:ph.getUTCDay(),hour:ph.getUTCHours()};
+
+  function nextDraw(g){
+    for(var i=0;i<8;i++){
+      var d=(now.day+i)%7;
+      if(g.d.indexOf(d)>=0 && !(i===0 && now.hour>=21)) return i;
+    }
+    return 7;
+  }
+  function rnd(m){
+    try{ var a=new Uint32Array(1); window.crypto.getRandomValues(a); return a[0]%m; }
+    catch(e){ return Math.floor(Math.random()*m); }
+  }
+  function draw(m){
+    var s=[];
+    while(s.length<6){ var x=rnd(m)+1; if(s.indexOf(x)<0) s.push(x); }
+    return s.sort(function(a,b){return a-b;});
+  }
+  function gcd(a,b){ return b?gcd(b,a%b):a; }
+  function crowded(n){
+    if(n.reduce(gcd)>1) return true;
+    if(n.every(function(x){return x%2===1;})) return true;
+    for(var i=0;i<4;i++) if(n[i+1]===n[i]+1 && n[i+2]===n[i]+2) return true;
+    if(n.filter(function(x){return x>31;}).length<2) return true;
+    var L={},D={};
+    n.forEach(function(x){ L[x%10]=(L[x%10]||0)+1; D[Math.floor(x/10)]=(D[Math.floor(x/10)]||0)+1; });
+    for(var a in L) if(L[a]>=3) return true;
+    for(var b in D) if(D[b]>=4) return true;
+    var df=[]; for(var j=1;j<6;j++) df.push(n[j]-n[j-1]);
+    if(df.filter(function(d){return d===df[0];}).length>=4) return true;
+    return false;
+  }
+  function pick(m){ var n,t=0; do{ n=draw(m); t++; }while(crowded(n) && t<5000); return n; }
+  function pad(x){ return (x<10?"0":"")+x; }
+
+  var cur=null, nums=[];
+  var sorted=GAMES.slice().sort(function(a,b){return nextDraw(a)-nextDraw(b);});
+  var tonight=sorted.filter(function(g){return nextDraw(g)===0;}).map(function(g){return g.n;});
+  document.getElementById("today").textContent = tonight.length
+    ? "Tonight, "+DN[now.day]+" at 9 PM: "+tonight.join(", ")
+    : "No 9 PM draws left today. Next draws are listed first.";
+
+  var box=document.getElementById("games");
+  sorted.forEach(function(g){
+    var nd=nextDraw(g);
+    var when = nd===0 ? "Tonight, 9 PM" : nd===1 ? "Tomorrow, 9 PM" : DN[(now.day+nd)%7]+", 9 PM";
+    var b=document.createElement("button");
+    b.type="button"; b.className="gb";
+    b.innerHTML='<span class="gn">'+g.n+'</span><span class="gt">'+g.t+'</span><span class="gw'+(nd===0?' live':'')+'">'+when+'</span>';
+    b.addEventListener("click",function(){
+      var all=box.querySelectorAll(".gb");
+      for(var i=0;i<all.length;i++) all[i].classList.remove("on");
+      b.classList.add("on"); cur=g; show();
+    });
+    box.appendChild(b);
+  });
+
+  function show(){
+    var msg=document.getElementById("msg");
+    if(!cur){ msg.textContent="Tap a game first."; return; }
+    nums=pick(cur.max);
+    document.getElementById("gname").textContent=cur.t+" "+cur.n;
+    document.getElementById("odds").textContent="Jackpot chance: 1 in "+cur.odds+", the same as any combination.";
+    document.getElementById("balls").innerHTML=nums.map(function(x,i){
+      return '<div class="ball'+(i%2?' r':'')+'">'+pad(x)+'</div>';
+    }).join("");
+    msg.textContent="";
+  }
+
+  document.getElementById("again").addEventListener("click",show);
+  document.getElementById("copy").addEventListener("click",function(){
+    var msg=document.getElementById("msg");
+    if(!nums.length){ msg.textContent="Tap a game first."; return; }
+    var t=nums.map(pad).join("-");
+    try{
+      navigator.clipboard.writeText(t).then(
+        function(){ msg.textContent="Copied "+t; },
+        function(){ msg.textContent=t; });
+    }catch(e){ msg.textContent=t; }
+  });
+})();
+</script>
+</body>
+</html>
